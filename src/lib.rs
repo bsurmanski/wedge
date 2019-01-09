@@ -1,2 +1,2 @@
-pub mod wedge;
-pub use self::wedge::*;
+pub mod index;
+pub mod mesh;
