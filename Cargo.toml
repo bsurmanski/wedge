@@ -1,0 +1,8 @@
+[package]
+name = "wedge"
+version = "0.1.0"
+authors = ["Brandon Surmanski <b.surmanski@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+num = "0.2.0"
