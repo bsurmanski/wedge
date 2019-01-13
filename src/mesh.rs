@@ -21,49 +21,9 @@ pub struct VertexRef<'a, V, E, F> {
     vertex_index: Index,
 }
 
-pub struct MutVertexRef<'a, V, E, F> {
-    mesh: &'a mut Mesh<V, E, F>,
-    vertex_index: Index,
-}
-
 impl<'a, V, E, F> Into<Index> for VertexRef<'a, V, E, F> {
     fn into(self) -> Index {
         return self.vertex_index;
-    }
-}
-
-impl<'a, V, E, F> Into<Index> for MutVertexRef<'a, V, E, F> {
-    fn into(self) -> Index {
-        return self.vertex_index;
-    }
-}
-
-macro_rules! impl_common_vertex_ref {
-    () => {
-        pub fn mesh(&self) -> &Mesh<V, E, F> {
-            return self.mesh;
-        }
-
-        pub fn index(&self) -> Index {
-            return self.vertex_index;
-        }
-
-        pub fn is_valid(&self) -> bool {
-            self.mesh().is_valid_vertex_index(self.index())
-        }
-
-        pub fn data(&self) -> Option<&V> {
-            if self.is_valid() {
-                return Some(&self.vertex_info().unwrap().data);
-            }
-            return None;
-        }
-
-        // Private methods
-        fn vertex_info(&self) -> Option<&VertexInfo<Index, V>> {
-            // assume our index must exist.
-            return self.mesh().vertex_info(self.index());
-        }
     }
 }
 
@@ -83,21 +43,26 @@ impl<'a, V, E, F> VertexRef<'a, V, E, F> {
         };
     }
 
-    impl_common_vertex_ref!();
-}
+    pub fn is_valid(&self) -> bool {
+        self.mesh.is_valid_vertex_index(self.index())
+    }
 
-impl<'a, V, E, F> MutVertexRef<'a, V, E, F> {
-    pub fn new(mesh: &'a mut Mesh<V, E, F>, index: Index) -> Self {
-        MutVertexRef{ mesh: mesh, vertex_index: index }
+    pub fn index(&self) -> Index {
+        return self.vertex_index;
+    }
+
+    pub fn data(&self) -> Option<&V> {
+        if self.is_valid() {
+            return Some(&self.vertex_info().unwrap().data);
+        }
+        return None;
     }
 
     // Private methods
-    fn vertex_info_mut(&mut self) -> Option<&mut VertexInfo<Index, V>> {
+    fn vertex_info(&self) -> Option<&VertexInfo<Index, V>> {
         // assume our index must exist.
-        return self.mesh.vertex_info_mut(self.index());
+        return self.mesh.vertex_info(self.index());
     }
-
-    impl_common_vertex_ref!();
 }
 
 #[derive(Clone)]
@@ -294,71 +259,61 @@ pub struct EdgeRef<'a, V, E, F> {
     edge_index: Index
 }
 
-pub struct MutEdgeRef<'a, V, E, F> {
-    mesh: &'a mut Mesh<V, E, F>,
-    edge_index: Index
-}
-
-macro_rules! impl_common_edge_ref {
-    () => {
-        fn edge_info(&self) -> Option<&EdgeInfo<E>> {
-            // assume our index must exist.
-            return self.mesh.edge_info(self.edge_index);
-        }
-
-        pub fn is_valid(&self) -> bool {
-            return self.mesh.is_valid_edge_index(self.edge_index);
-        }
-
-        pub fn data(&self) -> Option<&E> {
-            if self.is_valid() {
-                return Some(&self.edge_info().unwrap().data);
-            }
-            return None;
-        }
-
-        /*
-        // TODO: this doesn't work for MutEdgeRef right now.
-        // TODO: in non-manifold meshes, an edge might have <2 faces.
-        pub fn faces(&self) -> Option<Vec<FaceRef<'a, V, E, F>>> {
-            if self.is_valid() {
-                let edge_info = self.edge_info().unwrap();
-                return Some(vec![
-                    FaceRef{mesh: self.mesh, face_index: edge_info.half_edge[0].next_face_index},
-                    FaceRef{mesh: self.mesh, face_index: edge_info.half_edge[1].next_face_index},
-                ]);
-            }
-            return None;
-        }
-
-        pub fn vertices(&self) -> Option<Vec<VertexRef<'a, V, E, F>>> {
-            if self.is_valid() {
-                let edge_info = self.edge_info().unwrap();
-                return Some(vec![
-                    VertexRef{mesh: self.mesh, vertex_index: edge_info.half_edge[0].vertex_index},
-                    VertexRef{mesh: self.mesh, vertex_index: edge_info.half_edge[1].vertex_index},
-                ]);
-            }
-            return None;
-        }
-        */
-    }
-}
-
 impl<'a, V, E, F> EdgeRef<'a, V, E, F> {
     pub fn new(mesh: &'a Mesh<V, E, F>, index: Index) -> EdgeRef<'a, V, E, F> {
         EdgeRef { mesh: mesh, edge_index: index }
     }
 
-    impl_common_edge_ref!();
-}
-
-impl<'a, V, E, F> MutEdgeRef<'a, V, E, F> {
-    pub fn new(mesh: &'a mut Mesh<V, E, F>, index: Index) -> EdgeRef<'a, V, E, F> {
-        EdgeRef { mesh: mesh, edge_index: index }
+    fn edge_info(&self) -> Option<&EdgeInfo<E>> {
+        // assume our index must exist.
+        return self.mesh.edge_info(self.edge_index);
     }
 
-    impl_common_edge_ref!();
+    pub fn is_valid(&self) -> bool {
+        return self.mesh.is_valid_edge_index(self.edge_index);
+    }
+
+    pub fn data(&self) -> Option<&E> {
+        if self.is_valid() {
+            return Some(&self.edge_info().unwrap().data);
+        }
+        return None;
+    }
+
+    pub fn index(&self) -> Index {
+        return self.edge_index;
+    }
+
+    // vector of size 0-2
+    pub fn faces(&self) -> Vec<Index> {
+        let mut ret: Vec<Index> = Vec::with_capacity(2);
+        if self.is_valid() {
+            let edge_info = self.edge_info().unwrap();
+            for i in [0, 1].iter() {
+                let face_index = edge_info.half_edge[0].next_face_index;
+                if self.mesh.is_valid_face_index(face_index) {
+                    ret.push(face_index);
+                }
+            }
+        }
+        return ret;
+    }
+
+    // vector of size 2
+    pub fn vertices(&self) -> Vec<Index> {
+        let mut ret: Vec<Index> = Vec::with_capacity(2);
+        if self.is_valid() {
+            let edge_info = self.edge_info().unwrap();
+            for i in [0, 1].iter() {
+                let vertex_index = edge_info.half_edge[0].vertex_index;
+                if self.mesh.is_valid_vertex_index(vertex_index) {
+                    ret.push(vertex_index);
+                }
+            }
+        }
+        assert_eq!(ret.len(), 2, "invalid edge found with less than two vertices");
+        return ret;
+    }
 }
 
 /*
@@ -481,13 +436,6 @@ impl<V, E, F> Mesh<V, E, F> {
         return None;
     }
 
-    fn edge_info_mut(&mut self, index: Index) -> Option<&mut EdgeInfo<E>> {
-        if self.is_valid_edge_index(index) {
-            return Some(&mut self.edges[index as usize]);
-        }
-        return None;
-    }
-
     fn face_info(&self, index: Index) -> Option<&FaceInfo<F>> {
         if self.is_valid_face_index(index) {
             return Some(&self.faces[index as usize]);
@@ -497,10 +445,6 @@ impl<V, E, F> Mesh<V, E, F> {
 
     pub fn vertex(&self, index: Index) -> VertexRef<V, E, F> {
         return VertexRef{mesh: self, vertex_index: index};
-    }
-
-    pub fn vertex_mut(&mut self, index: Index) -> MutVertexRef<V, E, F> {
-        return MutVertexRef{mesh: self, vertex_index: index};
     }
 
     pub fn edge(&self, index: Index) -> EdgeRef<V, E, F> {
@@ -532,7 +476,6 @@ impl<V, E, F> Mesh<V, E, F> {
     pub fn add_edge(&mut self, e: E, v1: Index, v2: Index) -> Index {
         let new_index = Index::new(self.edges.len());
         let mut new_edge: EdgeInfo<E> = EdgeInfo::new(e);
-        let v2ref = VertexRef::new(self, v2);
 
         // The edge list is basically a doubley linked list.
         // Insert the new edge at the end of each edge list.
@@ -557,6 +500,15 @@ impl<V, E, F> Mesh<V, E, F> {
         }
 
         self.edges.push(new_edge);
+        return new_index;
+    }
+
+    pub fn add_face(&mut self, f: F, verts: Vec<Index>) -> Index {
+        let new_index = Index::new(self.faces.len());
+        assert!(verts.len() > 3, "a face must have more than 3 vertices");
+
+        unimplemented!();
+        //TODO: add face.
         return new_index;
     }
 }
