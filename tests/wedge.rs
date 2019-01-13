@@ -14,9 +14,9 @@ mod tests {
         mesh.add_vertex(5);
         mesh.add_vertex(11);
         mesh.add_vertex(15);
-        assert_eq!(*mesh.vertex(0).data(), 5);
-        assert_eq!(*mesh.vertex(1).data(), 11);
-        assert_eq!(*mesh.vertex(2).data(), 15);
+        assert_eq!(*mesh.vertex(0).data().unwrap(), 5);
+        assert_eq!(*mesh.vertex(1).data().unwrap(), 11);
+        assert_eq!(*mesh.vertex(2).data().unwrap(), 15);
     }
 
     #[test]
@@ -28,8 +28,27 @@ mod tests {
         let expect = vec![5, 11, 15];
         let mut i = 0;
         for v in mesh.vertex_iter() {
-            assert_eq!(*v.data(), expect[i]);
+            assert_eq!(*v.data().unwrap(), expect[i]);
             i += 1; 
+        }
+        assert_eq!(i, 3);
+    }
+
+    #[test]
+    fn test_add_basic_edge() {
+        let mut mesh: wedge::mesh::Mesh<(u32), (f32), ()> = wedge::mesh::Mesh::new();
+        let v1 = mesh.add_vertex(5);
+        let v2 = mesh.add_vertex(11);
+        let v3 = mesh.add_vertex(15);
+        mesh.add_edge(5.5, v1, v2);
+        mesh.add_edge(3.1, v2, v3);
+        mesh.add_edge(2.2, v3, v1);
+        let expect = vec![5.5, 3.1, 2.2];
+        let mut i = 0;
+        for e in mesh.edge_iter() {
+            println!("{}", i);
+            assert_eq!(*e.data().unwrap(), expect[i]);
+            i += 1;
         }
         assert_eq!(i, 3);
     }
